@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 @Controller
-public class AccessController{
+public class SkillController{
 
-	private static final Logger logger = LoggerFactory.getLogger(AccessController.class);
+	private static final Logger logger = LoggerFactory.getLogger(SkillController.class);
 	@RequestMapping(value = "/skillupload", method = RequestMethod.GET)
 	public String skillupload(Locale locale, Model model) {
         logger.info("Welcome skill! The client locale is {}.", locale);
