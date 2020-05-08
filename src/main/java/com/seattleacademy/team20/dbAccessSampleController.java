@@ -96,15 +96,15 @@ public class dbAccessSampleController {
      */
     private List<Map<String, String>> setSelectList() {
         // JSPに渡すデータを設定する
-        List<Map<String, String>> list = jdbcTemplate.query("select name, capital_city from prefectures",
-                new RowMapper<Map<String, String>>() {
-                    @SuppressWarnings({ "rawtypes", "unchecked" })
-                    public Map<String, String> mapRow(ResultSet rs, int rowNum) throws SQLException {
-                        Map<String, String> map = new HashMap();
-                        map.put("name", rs.getString("name"));
-                        map.put("capital_city", rs.getString("capital_city"));
-                        return map;
-                    }
+    List<Map<String, String>> list = jdbcTemplate.query("select name, capital_city from prefectures",
+            new RowMapper<Map<String, String>>() {
+                @SuppressWarnings({ "rawtypes", "unchecked" })
+                public Map<String, String> mapRow(ResultSet rs, int rowNum) throws SQLException {
+                    Map<String, String> map = new HashMap();
+                    map.put("name", rs.getString("name"));
+                    map.put("capital_city", rs.getString("capital_city"));
+                    return map;
+                }
                 });
         return list;
     }

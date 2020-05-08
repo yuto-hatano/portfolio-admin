@@ -1,21 +1,155 @@
 package com.seattleacademy.team20;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-@Controller
-public class SkillController{
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
-	private static final Logger logger = LoggerFactory.getLogger(SkillController.class);
-	@RequestMapping(value = "/skillupload", method = RequestMethod.GET)
-	public String skillupload(Locale locale, Model model) {
-        logger.info("Welcome skill! The client locale is {}.", locale);
-		return "skill-upload";
-	}
+@Controller
+//Spring MVCのコントローラーに該当するクラスに付与。
+//付与することでSpirngのコンポーネントとして認識され、@Component（や@Repository、@Serviceなど）と同じくApplicationContextに登録され、DI対象のクラスとなる。
+//@Componentと基本的な意味合いは同じで、@Controller を付与した場合は @Component はつけない。
+public class SkillController {
+
+  @Autowired
+  private JdbcTemplate jdbcTemplate;
+  //	Spring は、 JdbcTemplate と呼ばれるテンプレートクラスを提供し、
+  //	SQL リレーショナルデータベースと JDBC を簡単に操作できるようにする。
+  private static final Logger logger = LoggerFactory.getLogger(SkillController.class);
+
+  @RequestMapping(value = "/skillupload", method = RequestMethod.GET)
+  public String skillupload(Locale locale, Model model) throws IOException {
+    logger.info("Welcome skill! The client locale is {}.", locale);
+
+    initialize();
+    List<Skills> skills = selectSkills();
+    UploadSkill(skills);
+
+    return "skill-upload";
+  }
+
+  public List<Skills> selectSkills() {
+    final String sql = "select * from skills";
+    return jdbcTemplate.query(sql, new RowMapper<Skills>() {
+      public Skills mapRow(ResultSet rs, int rowNum) throws SQLException {
+        return new Skills(rs.getString("category"),
+            rs.getString("name"), rs.getInt("score"));
+      }
+    });
+  }
+
+  private FirebaseApp app;
+
+  public void initialize() throws IOException {
+    FileInputStream refreshToken = new FileInputStream(
+        "/Users/hatanyuto/test/dev-yuto-hatano-firebase-adminsdk-bgvtt-416796d4de.json");
+
+    FirebaseOptions options = new FirebaseOptions.Builder()
+        .setCredentials(GoogleCredentials.fromStream(refreshToken))
+        .setDatabaseUrl("https://dev-yuto-hatano.firebaseio.com/")
+        .build();
+    app = FirebaseApp.initializeApp(options, "other");
+  }
+
+  public void UploadSkill(List<Skills> skillList) {
+    final FirebaseDatabase database = FirebaseDatabase.getInstance(app);
+    DatabaseReference ref = database.getReference("/skill-categories");
+
+    //    複合キーの作成
+    //    Function<Skills, String> compositeKey = prd -> {
+    //      StringBuffer sb = new StringBuffer();
+    //      sb.append(prd.getName()).append("-").append(prd.getScore());
+    //      return sb.toString();
+    //    };
+
+    //		データの取得
+    //    List<Map<String, Object>> datalist = new ArrayList<Map<String, Object>>();
+    //    Map<String, Object> map;
+    //    Map<String, Map<String, List<Skills>>> skillMap = skillList.stream().collect(
+    //        Collectors.groupingBy(Skills::getCategory,
+    //            Collectors.groupingBy(compositeKey)));
+    //    for (Entry<String, Map<String, List<Skills>>> entry : skillMap.entrySet()) {
+    List<Map<String, Object>> datalist = new ArrayList<Map<String, Object>>();
+    Map<String, Object> map;
+    Map<String, List<Skills>> skillMap = skillList.stream().collect(
+        Collectors.groupingBy(Skills::getCategory));
+    for (Entry<String, List<Skills>> entry : skillMap.entrySet()) {
+      map = new HashMap<>();
+      map.put("category", entry.getKey());
+      map.put("skills", entry.getValue());
+
+      datalist.add(map);
+    }
+
+    //				jdbcTemplate.query("select category ,name, score from skills",
+    //	            new RowMapper<Skills>() {
+    //	                public Skills mapRow(ResultSet rs, int rowNum) throws SQLException {
+    //	                    Map<String, Object> map = new HashMap();
+    //	                    map.put("category", rs.getString("category");
+    //	                    map.put("name", rs.getString("name"));
+    //	                    map.put("score", rs.getString("score"));
+    //	                    return new Skills(rs.getString("category"),rs.getString("name"),rs.getInt("score"));
+    ref.setValue(datalist, new DatabaseReference.CompletionListener() {
+      @Override
+      public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
+        if (databaseError != null) {
+          System.out.println("data could be saved" + databaseError.getMessage());
+        } else {
+          System.out.println("Data save successfully.");
+        }
+      }
+    });
+  }
+
+  //	データの整形
+  //		インスタンス変数の設定
+  public class Skills {
+    private String category;
+    private String name;
+    private int score;
+
+    // 	コンストラクタの準備
+    public Skills(String category, String name, int score) {
+      this.category = category;
+      this.name = name;
+      this.score = score;
+    }
+
+    public String getCategory() {
+      return category;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public int getScore() {
+      return score;
+    }
+
+  }
 }
