@@ -46,17 +46,17 @@ public class SkillController {
     logger.info("Welcome skill! The client locale is {}.", locale);
 
     initialize();
-    List<Skills> skills = selectSkills();
-    UploadSkill(skills);
+    List<SkillInfo> skills = selectSkills();
+    uploadSkill(skills);
 
     return "skill-upload";
   }
 
-  public List<Skills> selectSkills() {
+  public List<SkillInfo> selectSkills() {
     final String sql = "select * from skills";
-    return jdbcTemplate.query(sql, new RowMapper<Skills>() {
-      public Skills mapRow(ResultSet rs, int rowNum) throws SQLException {
-        return new Skills(rs.getString("category"),
+    return jdbcTemplate.query(sql, new RowMapper<SkillInfo>() {
+      public SkillInfo mapRow(ResultSet rs, int rowNum) throws SQLException {
+        return new SkillInfo(rs.getString("category"),
             rs.getString("name"), rs.getInt("score"));
       }
     });
@@ -75,9 +75,9 @@ public class SkillController {
     app = FirebaseApp.initializeApp(options, "other");
   }
 
-  public void UploadSkill(List<Skills> skillList) {
+  public void uploadSkill(List<SkillInfo> skillList) {
     final FirebaseDatabase database = FirebaseDatabase.getInstance(app);
-    DatabaseReference ref = database.getReference("/skill-categories");
+    DatabaseReference ref = database.getReference("/skillcategory");
 
     //    複合キーの作成
     //    Function<Skills, String> compositeKey = prd -> {
@@ -95,14 +95,21 @@ public class SkillController {
     //    for (Entry<String, Map<String, List<Skills>>> entry : skillMap.entrySet()) {
     List<Map<String, Object>> datalist = new ArrayList<Map<String, Object>>();
     Map<String, Object> map;
-    Map<String, List<Skills>> skillMap = skillList.stream().collect(
-        Collectors.groupingBy(Skills::getCategory));
-    for (Entry<String, List<Skills>> entry : skillMap.entrySet()) {
+    Map<String, List<SkillInfo>> skillMap = skillList.stream().collect(Collectors.groupingBy(SkillInfo::getCategory));
+    for (Entry<String, List<SkillInfo>> entry : skillMap.entrySet()) {
       map = new HashMap<>();
       map.put("category", entry.getKey());
-      map.put("skills", entry.getValue());
+      map.put("skills", entry.getValue().stream().map(s -> s.getSkills()).collect(Collectors.toList()));
 
       datalist.add(map);
+      //      switch ("category") {
+      //      case "front_end":
+      //        datalist.add(0, map);
+      //      case "back_end":
+      //        datalist.add(1, map);
+      //      case "dev_Ops":
+      //        datalist.add(2, map);
+      //      }
     }
 
     //				jdbcTemplate.query("select category ,name, score from skills",
@@ -127,20 +134,32 @@ public class SkillController {
 
   //	データの整形
   //		インスタンス変数の設定
-  public class Skills {
+  public class SkillInfo {
     private String category;
+    private Skills skills;
+
+    public String getCategory() {
+      return category;
+    }
+
+    public Skills getSkills() {
+      return skills;
+    }
+
+    public SkillInfo(String category, String name, int score) {
+      this.category = category;
+      this.skills = new Skills(name, score);
+    }
+  }
+
+  public class Skills {
     private String name;
     private int score;
 
     // 	コンストラクタの準備
-    public Skills(String category, String name, int score) {
-      this.category = category;
+    public Skills(String name, int score) {
       this.name = name;
       this.score = score;
-    }
-
-    public String getCategory() {
-      return category;
     }
 
     public String getName() {
