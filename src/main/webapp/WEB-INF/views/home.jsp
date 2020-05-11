@@ -9,7 +9,7 @@
 <body>
 	<form method="get" action="<%=request.getContextPath()%>/skillupload">
 		<div style="padding: 5px;">
-			<button type="submit">移動</button>
+			<button type="submit">スキル登録</button>
 		</div>
 	</form>
 <h1>
