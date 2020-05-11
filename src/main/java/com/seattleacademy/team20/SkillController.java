@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -42,10 +41,13 @@ public class SkillController {
   private static final Logger logger = LoggerFactory.getLogger(SkillController.class);
 
   @RequestMapping(value = "/skillupload", method = RequestMethod.GET)
-  public String skillupload(Locale locale, Model model) throws IOException {
+  public String skillupload(Locale locale, Model model) {
     logger.info("Welcome skill! The client locale is {}.", locale);
-
-    initialize();
+    try {
+      initialize();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
     List<SkillInfo> skills = selectSkills();
     uploadSkill(skills);
 
@@ -93,23 +95,38 @@ public class SkillController {
     //        Collectors.groupingBy(Skills::getCategory,
     //            Collectors.groupingBy(compositeKey)));
     //    for (Entry<String, Map<String, List<Skills>>> entry : skillMap.entrySet()) {
-    List<Map<String, Object>> datalist = new ArrayList<Map<String, Object>>();
-    Map<String, Object> map;
-    Map<String, List<SkillInfo>> skillMap = skillList.stream().collect(Collectors.groupingBy(SkillInfo::getCategory));
-    for (Entry<String, List<SkillInfo>> entry : skillMap.entrySet()) {
-      map = new HashMap<>();
-      map.put("category", entry.getKey());
-      map.put("skills", entry.getValue().stream().map(s -> s.getSkills()).collect(Collectors.toList()));
 
-      datalist.add(map);
-      //      switch ("category") {
+    //    List<Map<String, Object>> datalist = new ArrayList<Map<String, Object>>();
+    Map<String, Object> map = new HashMap<>();
+    Map<String, List<SkillInfo>> skillMap = skillList.stream().collect(Collectors.groupingBy(SkillInfo::getCategory));
+    //    Arraylist使うとき、要素数わかってる場合は指定する
+    List<Map<String, Object>> list = new ArrayList<>(map.size());
+    Map<String, Object> innerMap;
+
+    String[] categories = { "front_end", "back_end", "dev_Ops" };
+    for (String category : categories) {
+      innerMap = new HashMap<>();
+      innerMap.put("category", category);
+      innerMap.put("skills", skillMap.get(category).stream().map(s -> s.getSkills()).collect(Collectors.toList()));
+      list.add(innerMap);
+      //    for (Entry<String, List<SkillInfo>> entry : skillMap.entrySet()) {
+      //      map = new HashMap<>();
+      //      map.put("category", entry.getKey());
+      //      map.put("skills", entry.getValue().stream().map(s -> s.getSkills()).collect(Collectors.toList()));
+      //
+      //      datalist.add(map);
+      //      switch文にbreakは必須！！
+      //      switch ("entry.getKey()") {
       //      case "front_end":
       //        datalist.add(0, map);
+      //        break;
       //      case "back_end":
       //        datalist.add(1, map);
+      //        break;
       //      case "dev_Ops":
       //        datalist.add(2, map);
-      //      }
+      //        break;
+
     }
 
     //				jdbcTemplate.query("select category ,name, score from skills",
@@ -120,7 +137,7 @@ public class SkillController {
     //	                    map.put("name", rs.getString("name"));
     //	                    map.put("score", rs.getString("score"));
     //	                    return new Skills(rs.getString("category"),rs.getString("name"),rs.getInt("score"));
-    ref.setValue(datalist, new DatabaseReference.CompletionListener() {
+    ref.setValue(list, new DatabaseReference.CompletionListener() {
       @Override
       public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
         if (databaseError != null) {
