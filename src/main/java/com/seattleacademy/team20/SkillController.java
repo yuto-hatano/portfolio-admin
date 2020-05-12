@@ -116,7 +116,7 @@ public class SkillController {
       //
       //      datalist.add(map);
       //      switch文にbreakは必須！！
-      //      switch ("entry.getKey()") {
+      //      switch (entry.getKey()) {
       //      case "front_end":
       //        datalist.add(0, map);
       //        break;
